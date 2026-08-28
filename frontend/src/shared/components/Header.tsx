@@ -11,6 +11,7 @@ import {
   Zap,
   Terminal,
   Cpu,
+  Shield,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -21,6 +22,7 @@ export const Header: React.FC = () => {
     { id: 'schema-builder', label: 'Schema Builder', icon: <TableProperties className="w-4 h-4" />, shortcut: '⌘2' },
     { id: 'data-explorer', label: 'Data Explorer', icon: <LayoutGrid className="w-4 h-4" />, shortcut: '⌘3' },
     { id: 'dashboard', label: 'Performance', icon: <Activity className="w-4 h-4" />, shortcut: '⌘4' },
+    { id: 'session-manager', label: 'Sessions', icon: <Shield className="w-4 h-4" />, shortcut: '⌘5' },
   ];
 
   return (

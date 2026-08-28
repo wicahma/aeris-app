@@ -11,12 +11,15 @@ import (
 
 type contextKey string
 
-const UserContextKey contextKey = "user"
+const (
+	UserContextKey    contextKey = "user"
+	SessionContextKey contextKey = "session"
+)
 
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 
 		if r.Method == "OPTIONS" {
@@ -28,12 +31,11 @@ func CORSMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func JWTAuthMiddleware(authUC domain.AuthUseCase) func(http.Handler) http.Handler {
+func StatefulAuthMiddleware(authUC domain.AuthUseCase) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				// Also check query param token for SSE / websocket
 				authHeader = r.URL.Query().Get("token")
 				if authHeader != "" {
 					authHeader = "Bearer " + authHeader
@@ -41,7 +43,7 @@ func JWTAuthMiddleware(authUC domain.AuthUseCase) func(http.Handler) http.Handle
 			}
 
 			if authHeader == "" {
-				httpError(w, "Authorization header required", http.StatusUnauthorized)
+				httpError(w, "Authorization token required", http.StatusUnauthorized)
 				return
 			}
 
@@ -51,13 +53,15 @@ func JWTAuthMiddleware(authUC domain.AuthUseCase) func(http.Handler) http.Handle
 				return
 			}
 
-			user, err := authUC.ValidateToken(parts[1])
+			rawToken := parts[1]
+			user, session, err := authUC.ValidateToken(r.Context(), rawToken)
 			if err != nil {
-				httpError(w, "Invalid or expired token", http.StatusUnauthorized)
+				httpError(w, "Invalid or revoked session token", http.StatusUnauthorized)
 				return
 			}
 
 			ctx := context.WithValue(r.Context(), UserContextKey, user)
+			ctx = context.WithValue(ctx, SessionContextKey, session)
 			ctx = context.WithValue(ctx, "username", user.Username)
 
 			next.ServeHTTP(w, r.WithContext(ctx))

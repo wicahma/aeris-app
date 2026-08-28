@@ -9,15 +9,15 @@ import (
 	"project-aeris/backend/domain"
 )
 
-type UserRepository struct {
+type userRepository struct {
 	sysDB *SystemDB
 }
 
-func NewUserRepository(sysDB *SystemDB) *UserRepository {
-	return &UserRepository{sysDB: sysDB}
+func NewUserRepository(sysDB *SystemDB) domain.UserRepository {
+	return &userRepository{sysDB: sysDB}
 }
 
-func (r *UserRepository) CreateUser(ctx context.Context, user *domain.User) error {
+func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	query := `INSERT INTO _system_users (id, username, password_hash, role, created_at, updated_at)
 	          VALUES (?, ?, ?, ?, ?, ?);`
 	_, err := r.sysDB.GetDB().ExecContext(ctx, query,
@@ -34,7 +34,7 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *domain.User) erro
 	return nil
 }
 
-func (r *UserRepository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
+func (r *userRepository) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
 	query := `SELECT id, username, password_hash, role, created_at, updated_at
 	          FROM _system_users WHERE username = ?;`
 	row := r.sysDB.GetDB().QueryRowContext(ctx, query, username)
@@ -57,7 +57,7 @@ func (r *UserRepository) GetUserByUsername(ctx context.Context, username string)
 	return &u, nil
 }
 
-func (r *UserRepository) GetUserByID(ctx context.Context, id string) (*domain.User, error) {
+func (r *userRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	query := `SELECT id, username, password_hash, role, created_at, updated_at
 	          FROM _system_users WHERE id = ?;`
 	row := r.sysDB.GetDB().QueryRowContext(ctx, query, id)
@@ -80,7 +80,7 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id string) (*domain.Us
 	return &u, nil
 }
 
-func (r *UserRepository) ListUsers(ctx context.Context) ([]*domain.User, error) {
+func (r *userRepository) List(ctx context.Context) ([]*domain.User, error) {
 	query := `SELECT id, username, password_hash, role, created_at, updated_at FROM _system_users ORDER BY username;`
 	rows, err := r.sysDB.GetDB().QueryContext(ctx, query)
 	if err != nil {

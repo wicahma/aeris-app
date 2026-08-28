@@ -4,6 +4,7 @@ import { Sidebar } from './shared/components/Sidebar';
 import { QueryEditor } from './features/query-editor/QueryEditor';
 import { SchemaBuilder } from './features/schema-builder/SchemaBuilder';
 import { DataExplorer } from './features/data-explorer/DataExplorer';
+import { SessionManager } from './features/auth/SessionManager';
 import { ToastContainer } from './shared/components/ToastContainer';
 import { useAerisStore } from './shared/store/useAerisStore';
 
@@ -19,6 +20,7 @@ const App: React.FC = () => {
           {activeTab === 'query-editor' && <QueryEditor />}
           {activeTab === 'schema-builder' && <SchemaBuilder />}
           {activeTab === 'data-explorer' && <DataExplorer />}
+          {activeTab === 'session-manager' && <SessionManager />}
         </main>
       </div>
       <ToastContainer />

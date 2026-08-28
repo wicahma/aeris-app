@@ -30,7 +30,14 @@ func NewRouter(
 
 	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
 	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)
-	mux.HandleFunc("GET /api/v1/auth/me", authHandler.GetMe)
+	mux.HandleFunc("POST /api/v1/auth/logout", authHandler.Logout)
+
+	authMiddleware := StatefulAuthMiddleware(authUC)
+
+	mux.Handle("GET /api/v1/auth/me", authMiddleware(http.HandlerFunc(authHandler.GetMe)))
+	mux.Handle("GET /api/v1/auth/sessions", authMiddleware(http.HandlerFunc(authHandler.ListSessions)))
+	mux.Handle("DELETE /api/v1/auth/sessions/{id}", authMiddleware(http.HandlerFunc(authHandler.RevokeSession)))
+	mux.Handle("POST /api/v1/auth/logout-all", authMiddleware(http.HandlerFunc(authHandler.RevokeAllOtherSessions)))
 
 	mux.HandleFunc("POST /api/v1/query/execute", queryHandler.Execute)
 	mux.HandleFunc("POST /api/v1/query/explain", queryHandler.Explain)

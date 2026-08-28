@@ -43,11 +43,11 @@ export interface QueryResult {
 }
 
 export interface MetricsData {
-  cpuUsage: number; // percentage
-  ramUsageMB: number; // MB
-  qps: number; // queries per second
+  cpuUsage: number;
+  ramUsageMB: number;
+  qps: number;
   activeConnections: number;
-  cacheHitRatio: number; // percentage
+  cacheHitRatio: number;
   slowQueriesCount: number;
   timestamp: number;
 }
@@ -62,6 +62,23 @@ export interface QueryHistoryItem {
   error?: string;
 }
 
+export interface UserInfo {
+  id: string;
+  username: string;
+  role: 'admin' | 'developer' | 'viewer';
+  created_at: string;
+}
+
+export interface SessionInfo {
+  id: string;
+  user_id: string;
+  ip_address: string;
+  user_agent: string;
+  expires_at: string;
+  created_at: string;
+  last_activity_at: string;
+}
+
 export interface ToastMessage {
   id: string;
   type: 'success' | 'error' | 'info' | 'warning';
@@ -69,4 +86,4 @@ export interface ToastMessage {
   message?: string;
 }
 
-export type ActiveTab = 'query-editor' | 'schema-builder' | 'data-explorer' | 'dashboard';
+export type ActiveTab = 'query-editor' | 'schema-builder' | 'data-explorer' | 'dashboard' | 'session-manager';

@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"project-aeris/backend/domain"
 )
@@ -33,7 +34,17 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, user, err := h.authUC.Login(r.Context(), req.Username, req.Password)
+	ipAddress := r.RemoteAddr
+	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		ipAddress = strings.Split(forwarded, ",")[0]
+	}
+
+	userAgent := r.Header.Get("User-Agent")
+	if userAgent == "" {
+		userAgent = "Unknown Client"
+	}
+
+	token, user, err := h.authUC.Login(r.Context(), req.Username, req.Password, ipAddress, userAgent)
 	if err != nil {
 		httpError(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -43,6 +54,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		"token": token,
 		"user":  user,
 	})
+}
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	rawToken := extractRawToken(r)
+	if rawToken != "" {
+		_ = h.authUC.Logout(r.Context(), rawToken)
+	}
+
+	jsonResponse(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -75,4 +95,72 @@ func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, http.StatusOK, fullUser)
+}
+
+func (h *AuthHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(UserContextKey).(*domain.User)
+	if !ok || user == nil {
+		httpError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	sessions, err := h.authUC.ListActiveSessions(r.Context(), user.ID)
+	if err != nil {
+		httpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, sessions)
+}
+
+func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(UserContextKey).(*domain.User)
+	if !ok || user == nil {
+		httpError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	sessionID := r.PathValue("id")
+	if sessionID == "" {
+		httpError(w, "Session ID parameter required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.authUC.RevokeSession(r.Context(), user.ID, sessionID); err != nil {
+		httpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, map[string]string{"message": "Session revoked successfully"})
+}
+
+func (h *AuthHandler) RevokeAllOtherSessions(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(UserContextKey).(*domain.User)
+	currentSession, _ := r.Context().Value(SessionContextKey).(*domain.Session)
+	if !ok || user == nil || currentSession == nil {
+		httpError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if err := h.authUC.RevokeOtherSessions(r.Context(), user.ID, currentSession.ID); err != nil {
+		httpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, map[string]string{"message": "All other sessions revoked successfully"})
+}
+
+func extractRawToken(r *http.Request) string {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		authHeader = r.URL.Query().Get("token")
+		if authHeader != "" {
+			return authHeader
+		}
+	}
+	parts := strings.Split(authHeader, " ")
+	if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+		return parts[1]
+	}
+	return ""
 }

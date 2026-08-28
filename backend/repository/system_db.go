@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "modernc.org/sqlite"
 	"project-aeris/backend/domain"
 	"golang.org/x/crypto/bcrypt"
+	_ "modernc.org/sqlite"
 )
 
 type SystemDB struct {
@@ -44,6 +44,17 @@ func (s *SystemDB) initTables() error {
 			role TEXT NOT NULL,
 			created_at DATETIME NOT NULL,
 			updated_at DATETIME NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS _system_sessions (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			token_hash TEXT UNIQUE NOT NULL,
+			ip_address TEXT NOT NULL,
+			user_agent TEXT NOT NULL,
+			expires_at DATETIME NOT NULL,
+			created_at DATETIME NOT NULL,
+			last_activity_at DATETIME NOT NULL,
+			FOREIGN KEY (user_id) REFERENCES _system_users(id) ON DELETE CASCADE
 		);`,
 		`CREATE TABLE IF NOT EXISTS _system_query_history (
 			id TEXT PRIMARY KEY,

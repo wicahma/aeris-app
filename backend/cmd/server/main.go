@@ -42,6 +42,7 @@ func main() {
 	}
 
 	userRepo := repository.NewUserRepository(systemDB)
+	sessionRepo := repository.NewSessionRepository(systemDB)
 	webhookRepo := repository.NewWebhookRepository(systemDB)
 	queryRepo := repository.NewQueryRepository(systemDB)
 
@@ -50,7 +51,7 @@ func main() {
 	queryUsecase := usecase.NewQueryUseCase(sqlExecutor, queryRepo, webhookUsecase, monitorUsecase)
 	schemaUsecase := usecase.NewSchemaUseCase(sqlExecutor, webhookUsecase, monitorUsecase)
 	crudUsecase := usecase.NewCRUDUseCase(sqlExecutor)
-	authUsecase := usecase.NewAuthUseCase(userRepo, "aeris-jwt-secret-key-2026")
+	authUsecase := usecase.NewAuthUseCase(userRepo, sessionRepo)
 
 	router := httphandler.NewRouter(
 		queryUsecase,
