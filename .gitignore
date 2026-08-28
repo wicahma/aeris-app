@@ -1,0 +1,11 @@
+# Dependencies & Builds
+node_modules/
+dist/
+backend/dist/
+backend/cmd/server/dist/
+backend/aeris-server
+backend/data/*.db
+backend/data/*.db-wal
+backend/data/*.db-shm
+.DS_Store
+*.log
