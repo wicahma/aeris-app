@@ -10,6 +10,7 @@ interface AerisState {
   selectedTableForExplorer: string | null;
   queryHistory: QueryHistoryItem[];
   isCommandPaletteOpen: boolean;
+  isMobileSidebarOpen: boolean;
   toasts: ToastMessage[];
   metricsHistory: MetricsData[];
   currentMetrics: MetricsData | null;
@@ -25,6 +26,8 @@ interface AerisState {
   clearHistory: () => void;
   setCommandPaletteOpen: (isOpen: boolean) => void;
   toggleCommandPalette: () => void;
+  setMobileSidebarOpen: (isOpen: boolean) => void;
+  toggleMobileSidebar: () => void;
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   removeToast: (id: string) => void;
   updateMetrics: (metrics: MetricsData) => void;
@@ -55,11 +58,12 @@ export const useAerisStore = create<AerisState>((set, get) => ({
     },
   ],
   isCommandPaletteOpen: false,
+  isMobileSidebarOpen: false,
   toasts: [],
   metricsHistory: [],
   currentMetrics: null,
 
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab) => set({ activeTab: tab, isMobileSidebarOpen: false }),
 
   setActiveDatabase: async (dbName) => {
     await ApiClient.switchDatabase(dbName);
@@ -72,7 +76,7 @@ export const useAerisStore = create<AerisState>((set, get) => ({
     });
   },
 
-  setSelectedTableForExplorer: (tableName) => set({ selectedTableForExplorer: tableName }),
+  setSelectedTableForExplorer: (tableName) => set({ selectedTableForExplorer: tableName, isMobileSidebarOpen: false }),
 
   loadDatabases: async () => {
     const dbs = await ApiClient.fetchDatabases();
@@ -114,6 +118,9 @@ export const useAerisStore = create<AerisState>((set, get) => ({
   setCommandPaletteOpen: (isOpen) => set({ isCommandPaletteOpen: isOpen }),
   toggleCommandPalette: () => set((state) => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
 
+  setMobileSidebarOpen: (isOpen) => set({ isMobileSidebarOpen: isOpen }),
+  toggleMobileSidebar: () => set((state) => ({ isMobileSidebarOpen: !state.isMobileSidebarOpen })),
+
   addToast: (toast) => {
     const id = Math.random().toString(36).substring(2, 9);
     set((state) => ({ toasts: [...state.toasts, { ...toast, id }] }));
@@ -129,7 +136,7 @@ export const useAerisStore = create<AerisState>((set, get) => ({
 
   updateMetrics: (metrics) => {
     set((state) => {
-      const history = [...state.metricsHistory, metrics].slice(-30); // Keep last 30 data points for live charts
+      const history = [...state.metricsHistory, metrics].slice(-30);
       return {
         currentMetrics: metrics,
         metricsHistory: history,

@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
 import { useAerisStore } from '../store/useAerisStore';
-import { Table, Search, Plus, Key, ChevronRight, Layers, FileCode } from 'lucide-react';
+import { Table, Search, Plus, ChevronRight, Layers, FileCode, X } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
-  const { schemas, selectedTableForExplorer, setSelectedTableForExplorer, setActiveTab, activeDatabase } = useAerisStore();
+  const {
+    schemas,
+    selectedTableForExplorer,
+    setSelectedTableForExplorer,
+    setActiveTab,
+    activeDatabase,
+    isMobileSidebarOpen,
+    setMobileSidebarOpen,
+  } = useAerisStore();
   const [filter, setFilter] = useState('');
 
   const filteredSchemas = schemas.filter((s) =>
     s.name.toLowerCase().includes(filter.toLowerCase())
   );
 
-  return (
-    <aside className="w-64 bg-[#0d131f] border-r border-slate-800/80 flex flex-col shrink-0 select-none overflow-hidden">
+  const sidebarContent = (
+    <aside className="w-64 bg-[#0d131f] border-r border-slate-800/80 flex flex-col shrink-0 select-none overflow-hidden h-full">
       {/* Database Tables Header */}
       <div className="p-3 border-b border-slate-800/80 space-y-2.5">
         <div className="flex items-center justify-between">
@@ -21,13 +29,22 @@ export const Sidebar: React.FC = () => {
               TABLES ({schemas.length})
             </span>
           </div>
-          <button
-            onClick={() => setActiveTab('schema-builder')}
-            className="p-1 hover:bg-slate-800 text-slate-400 hover:text-teal-300 rounded transition"
-            title="Create New Table"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setActiveTab('schema-builder')}
+              className="p-1 hover:bg-slate-800 text-slate-400 hover:text-teal-300 rounded transition"
+              title="Create New Table"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className="p-1 md:hidden hover:bg-slate-800 text-slate-400 hover:text-white rounded transition"
+              title="Close Drawer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Filter Tables */}
@@ -52,7 +69,6 @@ export const Sidebar: React.FC = () => {
         ) : (
           filteredSchemas.map((schema) => {
             const isSelected = selectedTableForExplorer === schema.name;
-            const pkColumn = schema.columns.find((c) => c.primaryKey)?.name;
 
             return (
               <div
@@ -106,5 +122,27 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex h-full shrink-0">
+        {sidebarContent}
+      </div>
+
+      {/* Mobile Drawer Backdrop */}
+      {isMobileSidebarOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <div className="relative z-10 h-full">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 };
