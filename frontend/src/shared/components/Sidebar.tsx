@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAerisStore } from '../store/useAerisStore';
-import { Table, Search, Plus, ChevronRight, Layers, FileCode, X, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Table, Search, Plus, ChevronRight, Layers, FileCode, X, PanelLeftClose, PanelLeft, Info } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const {
@@ -14,13 +14,14 @@ export const Sidebar: React.FC = () => {
   } = useAerisStore();
   const [filter, setFilter] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [hoveredSchema, setHoveredSchema] = useState<any | null>(null);
 
   const filteredSchemas = schemas.filter((s) =>
     s.name.toLowerCase().includes(filter.toLowerCase())
   );
 
   const sidebarContent = (
-    <aside className={`${isCollapsed ? 'w-16' : 'w-64'} bg-[#0d131f] border-r border-slate-800/80 flex flex-col shrink-0 select-none overflow-hidden h-full transition-all duration-200`}>
+    <aside className={`${isCollapsed ? 'w-16' : 'w-64'} bg-[#0d131f] border-r border-slate-800/80 flex flex-col shrink-0 select-none overflow-hidden h-full transition-all duration-200 relative`}>
       {/* Database Tables Header */}
       <div className="p-3 border-b border-slate-800/80 space-y-2.5">
         <div className="flex items-center justify-between">
@@ -91,8 +92,9 @@ export const Sidebar: React.FC = () => {
                   setSelectedTableForExplorer(schema.name);
                   setActiveTab('data-explorer');
                 }}
-                title={schema.name}
-                className={`group flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition ${
+                onMouseEnter={() => setHoveredSchema(schema)}
+                onMouseLeave={() => setHoveredSchema(null)}
+                className={`group flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition relative ${
                   isSelected
                     ? 'bg-teal-500/10 text-teal-300 font-medium border border-teal-500/30'
                     : 'hover:bg-slate-800/60 text-slate-300'
@@ -132,6 +134,25 @@ export const Sidebar: React.FC = () => {
           })
         )}
       </div>
+
+      {/* Floating Hover Schema Tooltip Popover */}
+      {hoveredSchema && (
+        <div className="absolute left-64 top-12 z-50 w-72 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl p-4 font-mono text-xs space-y-2 pointer-events-none animate-in fade-in zoom-in-95 backdrop-blur-xl">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+            <span className="font-bold text-white text-xs">{hoveredSchema.name}</span>
+            <span className="text-[10px] text-emerald-400 font-semibold">{hoveredSchema.rowCount} rows</span>
+          </div>
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            <span className="text-[10px] text-zinc-500 uppercase font-bold">Columns ({hoveredSchema.columns.length}):</span>
+            {hoveredSchema.columns.map((c: any) => (
+              <div key={c.name} className="flex items-center justify-between text-[11px] text-zinc-300">
+                <span>{c.name} {c.primaryKey && <strong className="text-amber-400">(PK)</strong>}</span>
+                <span className="text-zinc-500">{c.type}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Footer Info */}
       <div className="p-3 bg-slate-900/60 border-t border-slate-800/80 text-[11px] font-mono text-slate-400 flex items-center justify-between">

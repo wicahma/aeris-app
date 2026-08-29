@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
-import { sql, SQLDialect } from '@codemirror/lang-sql';
+import { sql } from '@codemirror/lang-sql';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { useAerisStore } from '../../shared/store/useAerisStore';
 import { ApiClient } from '../../shared/api-client';
@@ -8,7 +8,6 @@ import { QueryResult } from '../../shared/types';
 import {
   Play,
   Clock,
-  Download,
   History,
   Trash2,
   Sparkles,
@@ -16,17 +15,15 @@ import {
   Check,
   FileSpreadsheet,
   FileCode2,
-  Table as TableIcon,
   AlertCircle,
   Database,
-  ChevronRight,
 } from 'lucide-react';
 
 export const QueryEditor: React.FC = () => {
   const { activeDatabase, schemas, queryHistory, addHistoryItem, clearHistory, addToast } = useAerisStore();
 
   const [query, setQuery] = useState<string>(
-    `-- Aeris CodeMirror 6 SQL Console\n-- Execute multi-statement SQL queries against ${activeDatabase}\n\nSELECT u.id, u.username, u.email, COUNT(o.id) as order_count, SUM(o.total_amount) as total_spent\nFROM users u\nLEFT JOIN orders o ON u.id = o.user_id\nGROUP BY u.id;\n`
+    `-- Project Aeris SQL Console\n-- Execute queries against ${activeDatabase}\nSELECT name, type FROM sqlite_master WHERE type='table';\n`
   );
 
   const [isRunning, setIsRunning] = useState(false);
@@ -35,7 +32,6 @@ export const QueryEditor: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
-  // Build CodeMirror 6 SQL schema for auto-complete
   const sqlSchema = useMemo(() => {
     const map: Record<string, string[]> = {};
     schemas.forEach((s) => {
@@ -54,13 +50,15 @@ export const QueryEditor: React.FC = () => {
   }, [sqlSchema]);
 
   const handleExecute = async () => {
-    if (!query.trim()) return;
+    const windowSelection = window.getSelection()?.toString() || '';
+    const targetQuery = windowSelection.trim().length > 0 ? windowSelection : query;
+
+    if (!targetQuery.trim()) return;
 
     setIsRunning(true);
     const startTime = performance.now();
 
-    // Split multi-query statements by semicolon
-    const statements = query
+    const statements = targetQuery
       .split(';')
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
@@ -88,12 +86,12 @@ export const QueryEditor: React.FC = () => {
       addToast({
         type: 'success',
         title: 'Query Executed',
-        message: `Processed ${statements.length} query statement(s) in ${totalTime}ms`,
+        message: `Executed ${statements.length} statement(s) in ${totalTime}ms`,
       });
     } catch (err: any) {
       addToast({
         type: 'error',
-        title: 'Execution Failed',
+        title: 'Execution Error',
         message: err?.message || 'An error occurred during query execution',
       });
     } finally {
@@ -101,7 +99,6 @@ export const QueryEditor: React.FC = () => {
     }
   };
 
-  // Keyboard shortcut Ctrl+Enter or Cmd+Enter to run query
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
@@ -145,9 +142,7 @@ export const QueryEditor: React.FC = () => {
 
   return (
     <div className="flex-1 flex h-full overflow-hidden bg-[#0b0f17]" onKeyDown={handleKeyDown}>
-      {/* Main Editor & Results Panel */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        {/* Editor Toolbar */}
         <div className="h-11 bg-[#0d131f] border-b border-slate-800/80 px-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <button
@@ -167,7 +162,7 @@ export const QueryEditor: React.FC = () => {
             <button
               onClick={() =>
                 setQuery(
-                  `SELECT * FROM users LIMIT 10;\nSELECT * FROM orders LIMIT 10;`
+                  `SELECT name, type FROM sqlite_master WHERE type='table';`
                 )
               }
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs transition"
@@ -205,7 +200,6 @@ export const QueryEditor: React.FC = () => {
           </div>
         </div>
 
-        {/* CodeMirror 6 Editor Container */}
         <div className="h-64 border-b border-slate-800/80 relative text-sm font-mono overflow-hidden">
           <CodeMirror
             value={query}
@@ -242,11 +236,9 @@ export const QueryEditor: React.FC = () => {
           />
         </div>
 
-        {/* Results Bar / Statement Selector */}
         <div className="flex-1 flex flex-col min-h-0 bg-[#0b0f17]">
           {activeResults.length > 0 && (
             <div className="h-10 bg-[#0d131f] border-b border-slate-800/80 px-4 flex items-center justify-between shrink-0">
-              {/* Statement Tabs */}
               <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">
                 {activeResults.map((res, index) => (
                   <button
@@ -266,7 +258,6 @@ export const QueryEditor: React.FC = () => {
                 ))}
               </div>
 
-              {/* Execution Metrics & Export */}
               {currentResult && (
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono">
@@ -307,14 +298,13 @@ export const QueryEditor: React.FC = () => {
             </div>
           )}
 
-          {/* Result Data View */}
           <div className="flex-1 overflow-auto p-4 custom-scrollbar">
             {activeResults.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-500">
                 <Database className="w-12 h-12 text-slate-700 mb-3" />
                 <h3 className="text-sm font-semibold text-slate-400">Ready for Query Execution</h3>
                 <p className="text-xs font-mono text-slate-500 max-w-sm mt-1">
-                  Write SQL queries above and hit Run (⌘↵). Results will render here in a grid table.
+                  Write SQL queries above or select query text and hit Run (⌘↵).
                 </p>
               </div>
             ) : currentResult?.error ? (
@@ -371,7 +361,6 @@ export const QueryEditor: React.FC = () => {
         </div>
       </div>
 
-      {/* History Sidebar Drawer */}
       {showHistory && (
         <div className="w-80 bg-[#0d131f] border-l border-slate-800/80 flex flex-col shrink-0 select-none animate-in slide-in-from-right duration-200">
           <div className="p-3 border-b border-slate-800/80 flex items-center justify-between">
