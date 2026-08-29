@@ -39,6 +39,13 @@ func NewRouter(
 	mux.Handle("DELETE /api/v1/auth/sessions/{id}", authMiddleware(http.HandlerFunc(authHandler.RevokeSession)))
 	mux.Handle("POST /api/v1/auth/logout-all", authMiddleware(http.HandlerFunc(authHandler.RevokeAllOtherSessions)))
 
+	mux.Handle("GET /api/v1/auth/roles", authMiddleware(http.HandlerFunc(authHandler.ListRoles)))
+	mux.Handle("POST /api/v1/auth/roles", authMiddleware(http.HandlerFunc(authHandler.CreateRole)))
+	mux.Handle("DELETE /api/v1/auth/roles/{id}", authMiddleware(http.HandlerFunc(authHandler.DeleteRole)))
+
+	mux.Handle("GET /api/v1/auth/subordinates", authMiddleware(http.HandlerFunc(authHandler.ListSubordinates)))
+	mux.Handle("POST /api/v1/auth/subordinates", authMiddleware(http.HandlerFunc(authHandler.CreateSubordinate)))
+
 	mux.HandleFunc("POST /api/v1/query/execute", queryHandler.Execute)
 	mux.HandleFunc("POST /api/v1/query/explain", queryHandler.Explain)
 	mux.HandleFunc("GET /api/v1/query/history", queryHandler.GetHistory)

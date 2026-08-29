@@ -42,8 +42,17 @@ func (s *SystemDB) initTables() error {
 			username TEXT UNIQUE NOT NULL,
 			password_hash TEXT NOT NULL,
 			role TEXT NOT NULL,
+			supervisor_id TEXT,
 			created_at DATETIME NOT NULL,
 			updated_at DATETIME NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS _system_roles (
+			id TEXT PRIMARY KEY,
+			name TEXT UNIQUE NOT NULL,
+			description TEXT,
+			permissions_json TEXT NOT NULL,
+			created_by TEXT NOT NULL,
+			created_at DATETIME NOT NULL
 		);`,
 		`CREATE TABLE IF NOT EXISTS _system_sessions (
 			id TEXT PRIMARY KEY,
@@ -92,6 +101,8 @@ func (s *SystemDB) initTables() error {
 			return fmt.Errorf("error executing init query (%s): %w", q, err)
 		}
 	}
+
+	_, _ = s.db.Exec("ALTER TABLE _system_users ADD COLUMN supervisor_id TEXT;")
 
 	return nil
 }

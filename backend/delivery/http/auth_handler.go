@@ -27,6 +27,18 @@ type registerRequest struct {
 	Role     domain.Role `json:"role"`
 }
 
+type createRoleRequest struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Permissions []string `json:"permissions"`
+}
+
+type createSubordinateRequest struct {
+	Username string      `json:"username"`
+	Password string      `json:"password"`
+	Role     domain.Role `json:"role"`
+}
+
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -72,6 +84,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Role == "" {
+		req.Role = domain.RoleDeveloper
+	}
+
 	user, err := h.authUC.Register(r.Context(), req.Username, req.Password, req.Role)
 	if err != nil {
 		httpError(w, err.Error(), http.StatusBadRequest)
@@ -79,6 +95,44 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, http.StatusCreated, user)
+}
+
+func (h *AuthHandler) CreateSubordinate(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(UserContextKey).(*domain.User)
+	if !ok || user == nil {
+		httpError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req createSubordinateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpError(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	subordinate, err := h.authUC.CreateSubordinateUser(r.Context(), user.ID, req.Username, req.Password, req.Role)
+	if err != nil {
+		httpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	jsonResponse(w, http.StatusCreated, subordinate)
+}
+
+func (h *AuthHandler) ListSubordinates(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(UserContextKey).(*domain.User)
+	if !ok || user == nil {
+		httpError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	subordinates, err := h.authUC.ListSubordinates(r.Context(), user.ID)
+	if err != nil {
+		httpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, subordinates)
 }
 
 func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
@@ -148,6 +202,53 @@ func (h *AuthHandler) RevokeAllOtherSessions(w http.ResponseWriter, r *http.Requ
 	}
 
 	jsonResponse(w, http.StatusOK, map[string]string{"message": "All other sessions revoked successfully"})
+}
+
+func (h *AuthHandler) CreateRole(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(UserContextKey).(*domain.User)
+	if !ok || user == nil {
+		httpError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req createRoleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpError(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	role, err := h.authUC.CreateRole(r.Context(), user.ID, req.Name, req.Description, req.Permissions)
+	if err != nil {
+		httpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	jsonResponse(w, http.StatusCreated, role)
+}
+
+func (h *AuthHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
+	roles, err := h.authUC.ListRoles(r.Context())
+	if err != nil {
+		httpError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, roles)
+}
+
+func (h *AuthHandler) DeleteRole(w http.ResponseWriter, r *http.Request) {
+	roleID := r.PathValue("id")
+	if roleID == "" {
+		httpError(w, "Role ID required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.authUC.DeleteRole(r.Context(), roleID); err != nil {
+		httpError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, map[string]string{"message": "Role deleted successfully"})
 }
 
 func extractRawToken(r *http.Request) string {

@@ -88,6 +88,34 @@ func (uc *authUseCase) Register(ctx context.Context, username, password string, 
 	return user, nil
 }
 
+func (uc *authUseCase) CreateSubordinateUser(ctx context.Context, supervisorID, username, password string, role domain.Role) (*domain.User, error) {
+	existing, _ := uc.userRepo.GetByUsername(ctx, username)
+	if existing != nil {
+		return nil, fmt.Errorf("username already taken")
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	user := &domain.User{
+		ID:           fmt.Sprintf("usr_%s", generateRandomID(8)),
+		Username:     username,
+		PasswordHash: string(hashed),
+		Role:         role,
+		SupervisorID: supervisorID,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := uc.userRepo.Create(ctx, user); err != nil {
+		return nil, fmt.Errorf("failed to create subordinate user: %w", err)
+	}
+
+	return user, nil
+}
+
 func (uc *authUseCase) ValidateToken(ctx context.Context, rawToken string) (*domain.User, *domain.Session, error) {
 	tokenHash := hashToken(rawToken)
 
@@ -101,7 +129,6 @@ func (uc *authUseCase) ValidateToken(ctx context.Context, rawToken string) (*dom
 		return nil, nil, fmt.Errorf("unauthorized: user not found")
 	}
 
-	// Asynchronously touch last activity
 	go func(sessID string) {
 		bgCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
@@ -143,6 +170,35 @@ func (uc *authUseCase) RevokeOtherSessions(ctx context.Context, userID string, c
 
 func (uc *authUseCase) GetProfile(ctx context.Context, userID string) (*domain.User, error) {
 	return uc.userRepo.GetByID(ctx, userID)
+}
+
+func (uc *authUseCase) CreateRole(ctx context.Context, creatorID, name, description string, permissions []string) (*domain.RoleDef, error) {
+	role := &domain.RoleDef{
+		ID:          fmt.Sprintf("role_%s", generateRandomID(6)),
+		Name:        name,
+		Description: description,
+		Permissions: permissions,
+		CreatedBy:   creatorID,
+		CreatedAt:   time.Now(),
+	}
+
+	if err := uc.userRepo.CreateRole(ctx, role); err != nil {
+		return nil, fmt.Errorf("failed to create role: %w", err)
+	}
+
+	return role, nil
+}
+
+func (uc *authUseCase) ListRoles(ctx context.Context) ([]*domain.RoleDef, error) {
+	return uc.userRepo.ListRoles(ctx)
+}
+
+func (uc *authUseCase) DeleteRole(ctx context.Context, id string) error {
+	return uc.userRepo.DeleteRole(ctx, id)
+}
+
+func (uc *authUseCase) ListSubordinates(ctx context.Context, supervisorID string) ([]*domain.User, error) {
+	return uc.userRepo.ListSubordinates(ctx, supervisorID)
 }
 
 func (uc *authUseCase) startSessionCleaner() {

@@ -9,15 +9,26 @@ type Role string
 
 const (
 	RoleAdmin     Role = "admin"
+	RoleSupervisor Role = "supervisor"
 	RoleDeveloper Role = "developer"
 	RoleViewer    Role = "viewer"
 )
+
+type RoleDef struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Permissions []string  `json:"permissions"`
+	CreatedBy   string    `json:"created_by"`
+	CreatedAt   time.Time `json:"created_at"`
+}
 
 type User struct {
 	ID           string    `json:"id"`
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"-"`
 	Role         Role      `json:"role"`
+	SupervisorID string    `json:"supervisor_id,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
@@ -38,6 +49,10 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id string) (*User, error)
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	List(ctx context.Context) ([]*User, error)
+	ListSubordinates(ctx context.Context, supervisorID string) ([]*User, error)
+	CreateRole(ctx context.Context, role *RoleDef) error
+	ListRoles(ctx context.Context) ([]*RoleDef, error)
+	DeleteRole(ctx context.Context, id string) error
 }
 
 type SessionRepository interface {
@@ -54,10 +69,15 @@ type SessionRepository interface {
 type AuthUseCase interface {
 	Login(ctx context.Context, username, password, ipAddress, userAgent string) (string, *User, error)
 	Register(ctx context.Context, username, password string, role Role) (*User, error)
+	CreateSubordinateUser(ctx context.Context, supervisorID, username, password string, role Role) (*User, error)
 	ValidateToken(ctx context.Context, rawToken string) (*User, *Session, error)
 	GetProfile(ctx context.Context, userID string) (*User, error)
 	Logout(ctx context.Context, rawToken string) error
 	ListActiveSessions(ctx context.Context, userID string) ([]*Session, error)
 	RevokeSession(ctx context.Context, userID string, sessionID string) error
 	RevokeOtherSessions(ctx context.Context, userID string, currentSessionID string) error
+	CreateRole(ctx context.Context, creatorID, name, description string, permissions []string) (*RoleDef, error)
+	ListRoles(ctx context.Context) ([]*RoleDef, error)
+	DeleteRole(ctx context.Context, id string) error
+	ListSubordinates(ctx context.Context, supervisorID string) ([]*User, error)
 }
